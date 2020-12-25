@@ -1,65 +1,60 @@
-from flask import Flask, jsonify, request
+from flask import Flask, request
+from flask_jwt import JWT, jwt_required
+from flask_restful import Api, Resource
 
-stores = [
-    {
-        "name": "Google",
-        "items": [
-            {"name": "Pixel 3a", "price": 100},
-        ],
-    },
-    {
-        "name": "Apple",
-        "items": [
-            {"name": "iPhone SE", "price": 200},
-        ],
-    },
-]
+from security import authenticate, identity
+
+items = []
+
+
+class Item(Resource):
+    @jwt_required()
+    def get(self, name):
+        item = next(filter(lambda x: x["name"] == name, items), None)
+        return item if item else "", 404
+
+    @jwt_required()
+    def delete(self, name):
+        global items
+        items = list(filter(lambda x: x["name"] != name, items))
+        return "", 200
+
+    @jwt_required()
+    def put(self, name):
+        item = next(filter(lambda x: x["name"] == params["name"], items), None)
+        if not item:
+            return "", 404
+
+        params = request.get_json()
+        item["price"] = params["price"]
+        return item
+
+
+class ItemList(Resource):
+    @jwt_required()
+    def get(self):
+        return items
+
+    @jwt_required()
+    def post(self):
+        params = request.get_json()
+
+        if next(filter(lambda x: x["name"] == params["name"], items), None):
+            return "", 409
+
+        item = {"name": params["name"], "price": params["price"]}
+        items.append(item)
+        return item, 201
+
 
 app = Flask(__name__)
+app.debug = True
+app.config["SECRET_KEY"] = "dummy"
 
+jwt = JWT(app, authenticate, identity)
 
-@app.route("/stores", methods=["POST"])
-def create_store():
-    params = request.get_json()
-    store = {"name": params["name"], "items": []}
-    stores.append(store)
-    return jsonify(stores), 201
-
-
-@app.route("/stores", methods=["GET"])
-def get_stores():
-    return jsonify(stores)
-
-
-@app.route("/stores/<string:name>", methods=["GET"])
-def get_store(name):
-    for store in stores:
-        if store["name"] == name:
-            return jsonify(store)
-
-    return "", 404
-
-
-@app.route("/stores/<string:name>/items", methods=["POST"])
-def create_store_item(name):
-    params = request.get_json()
-
-    for store in stores:
-        if store["name"] == name:
-            item = {"name": params["name"], "price": params["price"]}
-            store["items"].append(item)
-            return jsonify(item), 201
-
-    return "", 404
-
-
-@app.route("/stores/<string:name>/items", methods=["GET"])
-def get_store_items(name):
-    for store in stores:
-        if store["name"] == name:
-            return jsonify(store["items"])
-
-    return "", 404
-
+api = Api(app)
+api.add_resource(ItemList, "/items")
+api.add_resource(Item, "/items/<string:name>")
 
 app.run()
