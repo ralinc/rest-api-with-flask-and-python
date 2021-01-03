@@ -2,6 +2,7 @@ from flask import Flask, request
 from flask_jwt import JWT, jwt_required
 from flask_restful import Api, Resource
 
+from register import UserRegister
 from security import authenticate, identity
 
 items = []
@@ -56,5 +57,6 @@ jwt = JWT(app, authenticate, identity)
 api = Api(app)
 api.add_resource(ItemList, "/items")
 api.add_resource(Item, "/items/<string:name>")
+api.add_resource(UserRegister, "/sign-up")
 
 app.run()
