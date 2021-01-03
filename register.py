@@ -2,6 +2,8 @@ import sqlite3
 
 from flask_restful import Resource, reqparse
 
+from user import User
+
 
 class UserRegister(Resource):
 
@@ -11,6 +13,9 @@ class UserRegister(Resource):
 
     def post(self):
         data = UserRegister.parser.parse_args()
+
+        if User.find_by_username(data["username"]):
+            return "", 409
 
         connection = sqlite3.connect("data.db")
 
